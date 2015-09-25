@@ -70,13 +70,11 @@ ApplicationWindow {
         onDropped: {
             if (tipText.state == "BACKGROUND")
             {
-                backgroundImage.source = drop.urls[0];
-                tipText.state = "LOGO";
+                backgroundImage.source = drop.urls[0]; // this causes the state to change
             }
             else if (tipText.state == "LOGO")
             {
-                logoImage.source = drop.urls[0];
-                tipText.state = "READY"
+                logoImage.source = drop.urls[0]; // this causes the state to change
             }
         }
     }
@@ -90,9 +88,17 @@ ApplicationWindow {
 
         onSourceSizeChanged: {
 
-            resizeImageWithAspectRatio(this, 1200, 900)
-            setWindowSizeWithOffset(width, height)
-            sourceChanged()
+            if (sourceSize.width == 0 || sourceSize.height == 0) {
+                // invalid file was loaded by user
+                console.log("Invalid file");
+                mainWindow.width = 640;
+                mainWindow.height = 480;
+            } else {
+                resizeImageWithAspectRatio(this, 1200, 900);
+                setWindowSizeWithOffset(width, height);
+                tipText.state = "LOGO";
+                sourceChanged();
+            }
         }
 
         Image {
@@ -110,7 +116,10 @@ ApplicationWindow {
             }
 
             onSourceSizeChanged: {
-                resizeLogoImage();
+                if (sourceSize.width > 0 && sourceSize.height > 0) {
+                    resizeLogoImage();
+                    tipText.state = "READY";
+                }
             }
         }
     }
