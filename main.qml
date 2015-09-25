@@ -16,6 +16,7 @@
 
 import QtQuick 2.3
 import QtQuick.Controls 1.2
+import QtQuick.Dialogs 1.2
 
 import "version.js" as Version
 
@@ -26,20 +27,25 @@ ApplicationWindow {
     height: 480
     title: Version.appName
 
+    minimumHeight: height
+    maximumHeight: height
+    minimumWidth: width
+    maximumWidth: width
+
     // Holds the about window to avoid it being removed by garbage collector
     property var aboutWindow
 
-    signal exportImage(var window)
+    signal exportImage(var window, url fileUrl)
 
     menuBar: MenuBar {
         Menu {
             title: qsTr("File")
             MenuItem {
                 id: exportMenuItem
-                text: "Export image"
+                text: "Export image..."
                 enabled: false
 
-                onTriggered: exportImage(mainWindow)
+                onTriggered: fileDialog.open()
             }
             MenuItem {
                 text: "Exit"
@@ -56,6 +62,23 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    FileDialog {
+        id: fileDialog
+        title: "Export image to file"
+
+        modality: Qt.ApplicationModal
+        selectExisting: false
+        selectFolder: false
+        selectMultiple: false
+
+        nameFilters: [ "PNG files (*.png)", "JPG files (*.jpg)"]
+
+        onAccepted: {
+            exportImage(mainWindow, fileDialog.fileUrl)
+        }
+
     }
 
     Rectangle {
@@ -240,8 +263,16 @@ ApplicationWindow {
     }
 
     function setWindowSizeWithOffset(width, height) {
-        mainWindow.width = getXWindowOffset() + width;
-        mainWindow.height = getYWindowOffset() + height;
+        var w = getXWindowOffset() + width;
+        var h = getYWindowOffset() + height;
+
+        mainWindow.minimumWidth = w
+        mainWindow.maximumWidth = w
+        mainWindow.width = w
+
+        mainWindow.minimumHeight = h
+        mainWindow.maximumHeight = h
+        mainWindow.height = h
     }
 
     function resizeImageWithAspectRatio(image, maxWidth, maxHeight) {

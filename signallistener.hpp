@@ -25,7 +25,7 @@ class SignalListener : public QObject
     Q_OBJECT
 
     public slots:
-    void exportImage(const QVariant &window);
+    void exportImage(const QVariant &window, const QUrl fileUrl);
 };
 
 #endif // SIGNALLISTENER_HPP

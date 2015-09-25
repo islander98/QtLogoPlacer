@@ -29,7 +29,7 @@
 
 #include "signallistener.hpp"
 
-void SignalListener::exportImage(const QVariant &_window)
+void SignalListener::exportImage(const QVariant &_window, const QUrl fileUrl)
 {
     qDebug() << "Handler called";
 
@@ -60,7 +60,9 @@ void SignalListener::exportImage(const QVariant &_window)
     QImage fullScreenshot = window->grabWindow();
     QImage trimmedScreenshot = fullScreenshot.copy(mappedCoords.x(), mappedCoords.y(), width, height);
 
-    if (!trimmedScreenshot.save("Image.png"))
+    qDebug() << "Trying to save to: " << fileUrl.toLocalFile();
+
+    if (!trimmedScreenshot.save(fileUrl.toLocalFile()))
     {
         qWarning() << "Could not save the screenshot image";
     }
@@ -75,8 +77,8 @@ int main(int argc, char *argv[])
     QObject *object = component.create();
 
     SignalListener s;
-    QObject::connect(object, SIGNAL(exportImage(QVariant)),
-                         &s, SLOT(exportImage(QVariant)));
+    QObject::connect(object, SIGNAL(exportImage(QVariant, QUrl)),
+                         &s, SLOT(exportImage(QVariant, QUrl)));
     QObject::connect(&engine, SIGNAL(quit()), &app, SLOT(quit()));
 
     return app.exec();
