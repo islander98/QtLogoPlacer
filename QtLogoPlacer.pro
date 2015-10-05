@@ -1,5 +1,7 @@
 TEMPLATE = app
 
+TARGET = LogoPlacer
+
 QT += qml quick widgets
 
 SOURCES += main.cpp

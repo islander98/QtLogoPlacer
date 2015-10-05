@@ -47,11 +47,37 @@ ApplicationWindow {
 
                 onTriggered: fileDialog.open()
             }
+
             MenuItem {
                 text: "Exit"
                 onTriggered: Qt.quit();
             }
         }
+        Menu {
+            title: qsTr("Edit")
+            MenuItem {
+                text: "Reset logo position"
+                onTriggered: logoImage.resetPosition();
+            }
+            MenuItem {
+                text: "Reset all"
+                onTriggered: {
+                    logoImage.source = "";
+                    logoImage.width = 0;
+                    logoImage.height = 0;
+                    backgroundImage.source = "";
+                    backgroundImage.width = 0;
+                    backgroundImage.height = 0;
+                    tipText.state = "BACKGROUND";
+                    mainWindow.resetSize()
+                }
+            }
+            MenuItem {
+                text: "Settings..."
+                enabled: false
+            }
+        }
+
         Menu {
             title: qsTr("Help")
             MenuItem {
@@ -88,6 +114,7 @@ ApplicationWindow {
     }
 
     DropArea {
+        id: dropArea
         anchors.fill: parent
 
         onDropped: {
@@ -123,26 +150,125 @@ ApplicationWindow {
                 sourceChanged();
             }
         }
+    }
 
-        Image {
-            id: logoImage
-            x: 10
-            y: 10
-            mipmap: true
+    Image {
+        id: logoImage
+        x: 30
+        y: 10
+        mipmap: true
+        fillMode: Image.PreserveAspectFit
 
-            Drag.active: true
+        Drag.active: true
 
-            MouseArea {
-                id: dragArea
-                anchors.fill: parent
-                drag.target: parent
+        MouseArea {
+            id: dragArea
+            anchors.fill: parent
+            drag.target: parent
+
+            hoverEnabled: true
+
+            onEntered: {
+                logoImageCanvas.opacity = 1.0;
             }
 
-            onSourceSizeChanged: {
-                if (sourceSize.width > 0 && sourceSize.height > 0) {
-                    resizeLogoImage();
-                    tipText.state = "READY";
-                }
+            onExited: {
+                logoImageCanvas.opacity = 0.0
+            }
+
+            cursorShape: Qt.SizeAllCursor
+        }
+
+        onSourceSizeChanged: {
+
+            console.log("Source size changed");
+
+            if (sourceSize.width > 0 && sourceSize.height > 0) {
+                resizeLogoImage();
+                tipText.state = "READY";
+            }
+        }
+
+        Canvas {
+            id: logoImageCanvas
+            width: logoImage.width
+            height: logoImage.height
+            opacity: 0
+
+            onPaint: {
+                var ctx = getContext("2d")
+
+                ctx.lineWidth = 2
+                ctx.strokeStyle = "red"
+
+                ctx.beginPath()
+                ctx.moveTo(0,0)
+                ctx.lineTo(width,0)
+                ctx.lineTo(width,height)
+                ctx.lineTo(0,height)
+                ctx.closePath()
+
+                ctx.stroke()
+            }
+        }
+
+        Rectangle {
+            color: "Red"
+
+            opacity: logoImageCanvas.opacity
+            width: 10
+            height: 10
+            anchors.right: logoImage.right
+            anchors.bottom: logoImage.bottom
+        }
+
+        function resetPosition()
+        {
+            x = 10;
+            y = 10;
+            mainWindow.resizeLogoImage();
+        }
+    }
+
+    // This rectangle is a transparent layer over the drawn red rectangle.
+    // It takes care of the dragging events.
+    // When it's dragged it is detached from the border's corner - that is
+    // why it is used as an addition
+    Rectangle {
+        id: logoImageDragHandle
+
+        color: "transparent"
+
+        width: 20
+        height: 20
+        anchors.right: logoImage.right
+        anchors.bottom: logoImage.bottom
+
+        Drag.active: true
+
+        MouseArea {
+            drag.target: parent
+            drag.threshold: 0
+            drag.smoothed: false
+            cursorShape: Qt.SizeFDiagCursor
+
+            anchors.fill: parent
+
+            onPressed: {
+                parent.anchors.right = undefined
+                parent.anchors.bottom = undefined
+            }
+
+            onReleased: {
+                parent.anchors.right = Qt.binding(function() { return logoImage.right })
+                parent.anchors.bottom = Qt.binding(function() { return logoImage.bottom })
+            }
+
+            onPositionChanged: {
+                var mapped = mapToItem(screenshotArea, mouse.x, mouse.y);
+
+                logoImage.height = mapped.y - logoImage.y; //we want bottom side of the logoImage to be in the place of mapped.y
+                logoImage.width = mapped.x - logoImage.x; //we want right side of the logoImage to be in the place of mapped.x
             }
         }
     }
@@ -211,6 +337,13 @@ ApplicationWindow {
             State {
                 name: "BACKGROUND"
                 PropertyChanges {target: tipText; text: qsTr("Drag background here!")}
+                StateChangeScript {
+                    script: {
+                        tipTextAnimation.loops = Animation.Infinite;
+                        tipTextAnimation.start();
+                        tipTextAnimation.stoppedCount = 0;
+                    }
+                }
             },
             State {
                 name: "LOGO"
@@ -254,6 +387,13 @@ ApplicationWindow {
         ]
     }
 
+    Rectangle {
+        color: "green"
+        opacity: 0.2
+
+        anchors.fill: dropArea
+    }
+
     function getXWindowOffset() {
         return mainWindow.width - screenshotArea.width;
     }
@@ -278,7 +418,7 @@ ApplicationWindow {
     function resizeImageWithAspectRatio(image, maxWidth, maxHeight) {
         var width = image.sourceSize.width;
         var height = image.sourceSize.height;
-        var ratio = width.toPrecision() / height.toPrecision()
+        var ratio = width / height;
 
         if (width > height) {
             if (width > maxWidth) {
@@ -298,5 +438,18 @@ ApplicationWindow {
         var bgHeight = backgroundImage.height;
 
         resizeImageWithAspectRatio(logoImage, bgWidth / 4, bgHeight / 4);
+    }
+
+    function resetSize() {
+        var w = 640;
+        var h = 480;
+
+        mainWindow.minimumWidth = w;
+        mainWindow.maximumWidth = w;
+        mainWindow.minimumHeight = h;
+        mainWindow.maximumHeight = h;
+
+        mainWindow.width = w;
+        mainWindow.height = h;
     }
 }

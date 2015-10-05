@@ -16,6 +16,6 @@
 
 .pragma library
 
-var appName = "QtLogoPlacer";
+var appName = "LogoPlacer";
 var major = 0;
 var minor = 9;
