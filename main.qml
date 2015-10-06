@@ -27,15 +27,21 @@ ApplicationWindow {
     height: 480
     title: Version.appName
 
-    minimumHeight: height
-    maximumHeight: height
-    minimumWidth: width
-    maximumWidth: width
+    minimumHeight: 480
+    maximumHeight: 480
+    minimumWidth: 640
+    maximumWidth: 640
 
     // Holds the about window to avoid it being removed by garbage collector
     property var aboutWindow
+    property var preferencesWindow
+
+    property int defaultMaximumBgWidth: 1200
+    property int defaultMaximumBgHeight: 900
+    property bool defaultLogoAspectRatio: true
 
     signal exportImage(var window, url fileUrl)
+    signal preferencesApplied(int width, int height, bool aspectRatio)
 
     menuBar: MenuBar {
         Menu {
@@ -61,20 +67,26 @@ ApplicationWindow {
             }
             MenuItem {
                 text: "Reset all"
+                enabled: false // drop area is buggy and doesn't accept files after logo and background are placed
                 onTriggered: {
-                    logoImage.source = "";
-                    logoImage.width = 0;
-                    logoImage.height = 0;
-                    backgroundImage.source = "";
-                    backgroundImage.width = 0;
-                    backgroundImage.height = 0;
                     tipText.state = "BACKGROUND";
-                    mainWindow.resetSize()
+
+                    mainWindow.setInitialSize();
                 }
             }
             MenuItem {
-                text: "Settings..."
-                enabled: false
+                text: "Preferences..."
+
+                onTriggered: {
+                    var component = Qt.createComponent("qrc:/preferences.qml");
+                    preferencesWindow = component.createObject(mainWindow, {
+                                                                   "preferredWidth": mainWindow.defaultMaximumBgWidth,
+                                                                   "preferredHeight": mainWindow.defaultMaximumBgHeight,
+                                                                   "preferedAspectRatio": mainWindow.defaultLogoAspectRatio
+                                                               });
+
+                    preferencesWindow.applied.connect(preferencesAppliedHandler);
+                }
             }
         }
 
@@ -113,22 +125,6 @@ ApplicationWindow {
         anchors.fill: parent
     }
 
-    DropArea {
-        id: dropArea
-        anchors.fill: parent
-
-        onDropped: {
-            if (tipText.state == "BACKGROUND")
-            {
-                backgroundImage.source = drop.urls[0]; // this causes the state to change
-            }
-            else if (tipText.state == "LOGO")
-            {
-                logoImage.source = drop.urls[0]; // this causes the state to change
-            }
-        }
-    }
-
     Image {
         id: backgroundImage
         objectName: "backgroundImage"
@@ -144,7 +140,7 @@ ApplicationWindow {
                 mainWindow.width = 640;
                 mainWindow.height = 480;
             } else {
-                resizeImageWithAspectRatio(this, 1200, 900);
+                resizeImageWithAspectRatio(this, defaultMaximumBgWidth, defaultMaximumBgHeight);
                 setWindowSizeWithOffset(width, height);
                 tipText.state = "LOGO";
                 sourceChanged();
@@ -152,9 +148,28 @@ ApplicationWindow {
         }
     }
 
+    // This somehow deactivates sometimes? Bug?
+    DropArea {
+        id: dropArea
+        anchors.fill: screenshotArea
+
+        onDropped: {
+            console.log("On Dropped");
+
+            if (tipText.state == "BACKGROUND")
+            {
+                backgroundImage.source = drop.urls[0]; // this causes the state to change
+            }
+            else if (tipText.state == "LOGO")
+            {
+                logoImage.source = drop.urls[0]; // this causes the state to change
+            }
+        }
+    }
+
     Image {
         id: logoImage
-        x: 30
+        x: 10
         y: 10
         mipmap: true
         fillMode: Image.PreserveAspectFit
@@ -337,6 +352,8 @@ ApplicationWindow {
             State {
                 name: "BACKGROUND"
                 PropertyChanges {target: tipText; text: qsTr("Drag background here!")}
+                PropertyChanges {target: logoImage; visible: false}
+                PropertyChanges {target: backgroundImage; visible: false}
                 StateChangeScript {
                     script: {
                         tipTextAnimation.loops = Animation.Infinite;
@@ -348,10 +365,12 @@ ApplicationWindow {
             State {
                 name: "LOGO"
                 PropertyChanges {target: tipText; text: qsTr("Now drag logo here!")}
+                PropertyChanges {target: backgroundImage; visible: true}
             },
             State {
                 name: "READY"
                 PropertyChanges {target: tipText; text: qsTr("Image is ready to be exported!")}
+                PropertyChanges {target: logoImage; visible: true}
                 StateChangeScript {
                     script: {
                         tipTextAnimation.loops = 2;
@@ -385,13 +404,6 @@ ApplicationWindow {
             }
 
         ]
-    }
-
-    Rectangle {
-        color: "green"
-        opacity: 0.2
-
-        anchors.fill: dropArea
     }
 
     function getXWindowOffset() {
@@ -440,7 +452,7 @@ ApplicationWindow {
         resizeImageWithAspectRatio(logoImage, bgWidth / 4, bgHeight / 4);
     }
 
-    function resetSize() {
+    function setInitialSize() {
         var w = 640;
         var h = 480;
 
@@ -449,7 +461,40 @@ ApplicationWindow {
         mainWindow.minimumHeight = h;
         mainWindow.maximumHeight = h;
 
+        //it causes errors - why?
         mainWindow.width = w;
         mainWindow.height = h;
     }
+
+    // Reset size of the background taking into consideration maximum size values
+    function resetBackgroundSize() {
+
+        if (backgroundImage.sourceSize.width > mainWindow.defaultMaximumBgWidth ||
+                backgroundImage.sourceSize.height > mainWindow.defaultMaximumBgHeight)
+        {
+            resizeImageWithAspectRatio(backgroundImage, mainWindow.defaultMaximumBgWidth, mainWindow.defaultMaximumBgHeight);
+            setWindowSizeWithOffset(backgroundImage.width, backgroundImage.height);
+            logoImage.resetPosition();
+        }
+    }
+
+    //Preferences handling
+
+    onDefaultLogoAspectRatioChanged: {
+        if (defaultLogoAspectRatio) {
+            logoImage.fillMode = Image.PreserveAspectFit;
+        } else {
+            logoImage.fillMode = Image.Stretch;
+        }
+    }
+
+    function preferencesAppliedHandler(width, height, aspectRatio)
+    {
+        defaultMaximumBgWidth = width;
+        defaultMaximumBgHeight = height;
+        defaultLogoAspectRatio = aspectRatio;
+        resetBackgroundSize();
+        preferencesApplied(width, height, aspectRatio);
+    }
+
 }

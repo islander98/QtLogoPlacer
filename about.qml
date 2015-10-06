@@ -22,7 +22,9 @@ import "version.js" as Version
 ApplicationWindow {
     id: aboutWindow
     width: 510
+    minimumWidth: 510
     height: 270
+    minimumHeight: 270
     title: "About"
     visible: true
 

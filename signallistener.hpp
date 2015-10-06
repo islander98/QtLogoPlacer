@@ -26,6 +26,7 @@ class SignalListener : public QObject
 
     public slots:
     void exportImage(const QVariant &window, const QUrl fileUrl);
+    void applyPreferences(const int width, const int height, const bool aspectRatio);
 };
 
 #endif // SIGNALLISTENER_HPP

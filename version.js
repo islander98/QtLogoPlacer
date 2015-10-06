@@ -17,5 +17,5 @@
 .pragma library
 
 var appName = "LogoPlacer";
-var major = 0;
-var minor = 9;
+var major = 1;
+var minor = 0;

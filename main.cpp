@@ -68,6 +68,12 @@ void SignalListener::exportImage(const QVariant &_window, const QUrl fileUrl)
     }
 }
 
+void SignalListener::applyPreferences(const int width, const int height, const bool aspectRatio)
+{
+    /// TODO store preferences into a file
+    qDebug() << "Apply preferences: " << width << ", " << height << ", " << aspectRatio;
+}
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -79,6 +85,8 @@ int main(int argc, char *argv[])
     SignalListener s;
     QObject::connect(object, SIGNAL(exportImage(QVariant, QUrl)),
                          &s, SLOT(exportImage(QVariant, QUrl)));
+    QObject::connect(object, SIGNAL(preferencesApplied(int, int, bool)),
+                         &s, SLOT(applyPreferences(int, int, bool)));
     QObject::connect(&engine, SIGNAL(quit()), &app, SLOT(quit()));
 
     return app.exec();

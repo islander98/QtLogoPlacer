@@ -3,5 +3,6 @@
         <file>main.qml</file>
         <file>about.qml</file>
         <file>version.js</file>
+        <file>preferences.qml</file>
     </qresource>
 </RCC>
